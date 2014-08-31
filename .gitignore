@@ -1,2 +1,8 @@
+.*
 *.py[co]
 *.sw[op]
+venv/
+*.egg-info
+*.egg
+nosetests.xml
+!.gitignore
