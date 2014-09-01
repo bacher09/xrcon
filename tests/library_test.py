@@ -1,6 +1,8 @@
-from .base import TestCase, mock
+from .base import TestCase, mock, unittest
 from xrcon import utils
+from xrcon import client
 import six
+import socket
 
 
 class UtilsTest(TestCase):
@@ -40,3 +42,105 @@ class UtilsTest(TestCase):
             utils.parse_challenge_response(challenge_resp),
             six.b('11111111111')
         )
+
+
+class ClientTest(TestCase):
+
+    def test_validate_secure_rcon(self):
+        with self.assertRaises(ValueError):
+            client.XRcon('localhost', 26000, 'passw', 4)
+
+        with self.assertRaises(ValueError):
+            client.XRcon('localhost', 26000, 'passw', -1)
+
+        rcon = client.XRcon('localhost', 26000, 'passw', 0)
+
+        with self.assertRaises(ValueError):
+            rcon.secure_rcon = -1
+
+        self.assertEqual(rcon.secure_rcon, 0)
+
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_connect(self, socket_mock):
+        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
+        rcon.connect()
+        socket_mock.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        socket_mock.return_value \
+            .connect.assert_called_once_with(('127.0.0.1', 26000))
+        rcon.close()
+        self.assertTrue(socket_mock.return_value.close.called)
+
+        with self.assertRaises(client.NotConnected):
+            rcon.close()
+
+    @unittest.skipUnless(socket.has_ipv6, "IPv6 is not supported")
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_connect_ipv6(self, socket_mock):
+        rcon = client.XRcon('::1', 26000, 'passw')
+        rcon.connect()
+        socket_mock.assert_called_once_with(socket.AF_INET6, socket.SOCK_DGRAM)
+        rcon.close()
+        self.assertTrue(socket_mock.return_value.close.called)
+
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_getchallenge(self, socket_mock):
+        socket_mock.return_value.recv.side_effect = [
+            six.b('\xFF\xFF\xFF\xFFBAD PACKET'),
+            six.b('\xff\xff\xff\xffchallenge 11111111111\x00vle ')
+        ]
+        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
+        rcon.connect()
+        challenge = rcon.getchallenge()
+        self.assertEqual(challenge, six.b('11111111111'))
+        rcon.close()
+
+    @mock.patch('time.time')
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_getchallenge_timeout(self, socket_mock, time_mock):
+        time_mock.return_value = 100.0
+
+        def recv(num):
+            time_mock.return_value += 20
+            return six.b('\xFF\xFF\xFF\xFFBAD PACKET')
+
+        socket_mock.return_value.recv.side_effect = recv
+        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
+        rcon.connect()
+        with self.assertRaises(socket.timeout):
+            rcon.getchallenge()
+
+    @mock.patch('time.time')
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_send(self, socket_mock, time_mock):
+        time_mock.return_value = 100.0
+        def socket_send_args():
+            return socket_mock.return_value.send.call_args[0][0]
+
+        rcon = client.XRcon('127.0.0.1', 26000, 'passw', 0)
+        challenge = six.b('11111111111')
+        rcon.getchallenge = lambda: challenge
+        rcon.connect()
+        rcon.send('status')
+        self.assertEqual(
+            socket_send_args(),
+            six.b('\xFF\xFF\xFF\xFFrcon passw status')
+        )
+
+        rcon.secure_rcon = 1
+        rcon.send('status')
+        self.assertEqual(
+            socket_send_args(),
+            utils.rcon_secure_time_packet("passw", "status")
+        )
+
+        rcon.secure_rcon = 2
+        rcon.send('status')
+        self.assertEqual(
+            socket_send_args(),
+            utils.rcon_secure_challenge_packet("passw", challenge, "status")
+        )
+
+        rcon._secure_rcon = -1
+        with self.assertRaises(ValueError):
+            rcon.send('status')
+        rcon.close()
