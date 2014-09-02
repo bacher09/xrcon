@@ -5,6 +5,7 @@ python:
   - '3.2'
   - '3.3'
   - '3.4'
-env:
-  - NOPLUGINS=true
+install:
+    - pip install coveralls
 script: 'python setup.py nosetests'
+after_success: coveralls
