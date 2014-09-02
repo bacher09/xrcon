@@ -7,3 +7,4 @@ cover/
 *.egg
 nosetests.xml
 !.gitignore
+!.travis.yml
