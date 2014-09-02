@@ -32,10 +32,13 @@ def connection_required(fun):
 class XRcon(object):
 
     RCON_NOSECURE = 0
+    "Old quake rcon connection"
     RCON_SECURE_TIME = 1
+    "secure rcon with time based sign"
     RCON_SECURE_CHALLENGE = 2
+    "secure rcon with challenge based sign"
 
-    SECURE_TYPES = frozenset([
+    RCON_TYPES = frozenset([
         RCON_NOSECURE, RCON_SECURE_TIME, RCON_SECURE_CHALLENGE
     ])
 
@@ -46,6 +49,13 @@ class XRcon(object):
 
     def __init__(self, host, port, password, secure_rcon=RCON_SECURE_TIME,
                  timeout=0.7):
+        """ host --- ip address or domain of server
+        port --- udp port of server
+        password --- rcon password
+        secure_rcon --- type of rcon connection, default secure rcon, use 0 
+        for old quake servers
+        timeout --- socket timeout
+        """
         self.host = host
         self.port = port
         self.password = password
@@ -55,16 +65,18 @@ class XRcon(object):
 
     @property
     def secure_rcon(self):
+        "Type of rcon connection"
         return self._secure_rcon
 
     @secure_rcon.setter
     def secure_rcon(self, value):
-        if value not in self.SECURE_TYPES:
+        if value not in self.RCON_TYPES:
             raise ValueError("Bad value of secure_rcon")
 
         self._secure_rcon = value
 
     def connect(self):
+        "Create connection to server"
         family, stype, proto, cname, sockaddr = self.best_connection_params(
             self.host, self.port)
         self.sock = socket.socket(family, stype)
@@ -73,11 +85,13 @@ class XRcon(object):
 
     @connection_required
     def close(self):
+        "Close connection"
         self.sock.close()
         self.sock = None
 
     @connection_required
     def send(self, command):
+        "Send rcon command to server"
         if self.secure_rcon == self.RCON_NOSECURE:
             self.sock.send(rcon_nosecure_packet(self.password, command))
         elif self.secure_rcon == self.RCON_SECURE_TIME:
@@ -118,11 +132,19 @@ class XRcon(object):
 
     @connection_required
     def execute(self, command, timeout=1):
+        """Execute rcon command on server and fetch result
+        Args:
+            command --- executed command
+            timeout --- read timeout
+
+        Returns: bytes response
+        """
         self.send(command)
         return self.read_untill(timeout)
 
     @connection_required
     def getchallenge(self):
+        "Return server challenge"
         self.sock.send(CHALLENGE_PACKET)
         # wait challenge response
         for packet in self.read_iterator(self.CHALLENGE_TIMEOUT):
