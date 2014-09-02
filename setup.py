@@ -1,4 +1,5 @@
 from setuptools import setup
+import os.path
 import sys
 
 
@@ -31,10 +32,16 @@ if lt27():
     tests_require.append('unittest2')
 
 
+ROOT_PATH = os.path.dirname(__file__)
+with open(os.path.join(ROOT_PATH, "README.rst")) as f:
+    long_description = f.read()
+
+
 setup(
     name='xrcon',
     description=('Quake and DarkPlaces rcon client.'
         'Suppor such games like Xonotic, Nexuiz and other'),
+    long_description=long_description,
     author='Slava Bacherikov',
     url="https://github.com/bacher09/xrcon",
     packages=["xrcon"],

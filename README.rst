@@ -12,6 +12,8 @@ Darkplaces and Quakes rcon protocol and client implementation. Support
 Darkplaces secure rcon. Works with such games like Xonotic, Nexuiz, Warsow and
 other games with Quakes rcon.
 
+Works with python 2.6+, 3.2+.
+
 Installation
 ------------
 
