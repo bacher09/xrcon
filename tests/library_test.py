@@ -43,6 +43,12 @@ class UtilsTest(TestCase):
             six.b('11111111111')
         )
 
+    def test_parse_rcon_response(self):
+        self.assertEqual(
+            utils.parse_rcon_response(six.b('\xFF\xFF\xFF\xFFnTest')),
+            six.b('Test')
+        )
+
 
 class ClientTest(TestCase):
 
@@ -62,11 +68,13 @@ class ClientTest(TestCase):
 
     @mock.patch('socket.socket', spec=socket.socket)
     def test_client_connect(self, socket_mock):
-        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
+        rcon = client.XRcon('127.0.0.1', 26000, 'passw', timeout=1)
         rcon.connect()
         socket_mock.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
         socket_mock.return_value \
             .connect.assert_called_once_with(('127.0.0.1', 26000))
+
+        socket_mock.return_value.settimeout.assert_called_once_with(1)
         rcon.close()
         self.assertTrue(socket_mock.return_value.close.called)
 
@@ -143,4 +151,29 @@ class ClientTest(TestCase):
         rcon._secure_rcon = -1
         with self.assertRaises(ValueError):
             rcon.send('status')
+        rcon.close()
+
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_read_once(self, socket_mock):
+        socket_mock.return_value.recv.return_value = \
+            six.b('\xFF\xFF\xFF\xFFnTest')
+
+        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
+        rcon.connect()
+        self.assertEqual(rcon.read_once(), six.b('Test'))
+        rcon.close()
+
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_execute(self, socket_mock):
+        socket_mock.return_value.recv.side_effect = [
+            six.b('\xFF\xFF\xFF\xFFn1'),
+            six.b('\xFF\xFF\xFF\xFFn2'),
+            six.b('\xFF\xFF\xFF\xFFn3'),
+            socket.timeout
+        ]
+
+        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
+        rcon.connect()
+        data = rcon.execute('status')
+        self.assertEqual(data, six.b('123'))
         rcon.close()

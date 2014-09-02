@@ -1,13 +1,16 @@
 import socket
 import time
 from functools import wraps
+import six
 from .utils import (
     rcon_nosecure_packet,
     rcon_secure_time_packet,
     rcon_secure_challenge_packet,
     parse_challenge_response,
+    parse_rcon_response,
     CHALLENGE_PACKET,
-    CHALLENGE_RESPONSE_HEADER
+    CHALLENGE_RESPONSE_HEADER,
+    RCON_RESPONSE_HEADER,
 )
 
 
@@ -41,12 +44,14 @@ class XRcon(object):
 
     _secure_rcon = RCON_SECURE_TIME
 
-    def __init__(self, host, port, password, secure_rcon=RCON_SECURE_TIME):
+    def __init__(self, host, port, password, secure_rcon=RCON_SECURE_TIME,
+                 timeout=0.7):
         self.host = host
         self.port = port
         self.password = password
         self.secure_rcon = secure_rcon
         self.sock = None
+        self.timeout = timeout
 
     @property
     def secure_rcon(self):
@@ -63,6 +68,7 @@ class XRcon(object):
         family, stype, proto, cname, sockaddr = self.best_connection_params(
             self.host, self.port)
         self.sock = socket.socket(family, stype)
+        self.sock.settimeout(self.timeout)
         self.sock.connect(sockaddr)
 
     @connection_required
@@ -84,16 +90,44 @@ class XRcon(object):
             raise ValueError("Bad value of secure_rcon")
 
     @connection_required
+    def read_iterator(self, timeout=3):
+        timeout_time = time.time() + timeout
+        while time.time() < timeout_time:
+            yield self.sock.recv(self.MAX_PACKET_SIZE)
+
+        raise socket.timeout("Read timeout")
+
+    @connection_required
+    def read_once(self, timeout=2):
+        for packet in self.read_iterator(timeout):
+            if packet.startswith(RCON_RESPONSE_HEADER):
+                return parse_rcon_response(packet)
+
+    @connection_required
+    def read_untill(self, timeout=1):
+        data = []
+        try:
+            for packet in self.read_iterator(timeout):
+                if packet.startswith(RCON_RESPONSE_HEADER):
+                    data.append(parse_rcon_response(packet))
+        except socket.timeout:
+            pass
+
+        if data:
+            return six.b('').join(data)
+
+    @connection_required
+    def execute(self, command, timeout=1):
+        self.send(command)
+        return self.read_untill(timeout)
+
+    @connection_required
     def getchallenge(self):
         self.sock.send(CHALLENGE_PACKET)
         # wait challenge response
-        timeout = time.time() + self.CHALLENGE_TIMEOUT
-        while time.time() < timeout:
-            packet = self.sock.recv(self.MAX_PACKET_SIZE)
+        for packet in self.read_iterator(self.CHALLENGE_TIMEOUT):
             if packet.startswith(CHALLENGE_RESPONSE_HEADER):
                 return parse_challenge_response(packet)
-
-        raise socket.timeout("Challenge timeout")
 
     @staticmethod
     def best_connection_params(host, port):

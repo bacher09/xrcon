@@ -8,6 +8,7 @@ md4 = lambda *args, **kw: hashlib.new('MD4', *args, **kw)
 
 
 RCON_PACKET_HEADER = six.b('\xFF' * 4)
+RCON_RESPONSE_HEADER = RCON_PACKET_HEADER + six.b('n')
 CHALLENGE_PACKET = RCON_PACKET_HEADER + six.b('getchallenge')
 CHALLENGE_RESPONSE_HEADER = RCON_PACKET_HEADER + six.b('challenge ')
 
@@ -67,3 +68,8 @@ def rcon_secure_challenge_packet(password, challenge, command):
         six.b(' '),
         command
     ])
+
+
+def parse_rcon_response(packet):
+    l = len(RCON_RESPONSE_HEADER)
+    return packet[l:]
