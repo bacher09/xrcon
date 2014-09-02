@@ -3,6 +3,7 @@
 *.sw[op]
 venv/
 cover/
+dist/
 *.egg-info
 *.egg
 nosetests.xml
