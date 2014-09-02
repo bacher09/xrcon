@@ -49,6 +49,20 @@ class UtilsTest(TestCase):
             six.b('Test')
         )
 
+    def test_parse_server_addr(self):
+        self.assertEqual(
+            utils.parse_server_addr('hostname', default_port=1234),
+            ('hostname', 1234)
+        )
+
+        self.assertEqual(
+            utils.parse_server_addr('[::1]', default_port=6060),
+            ('::1', 6060)
+        )
+
+        with self.assertRaises(ValueError):
+            utils.parse_server_addr('[::1]:00')
+
 
 class ClientTest(TestCase):
 
