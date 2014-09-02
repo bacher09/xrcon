@@ -18,13 +18,13 @@ def rcon_nosecure_packet(password, command):
         .format(password=password, command=command))
 
 
-if six.PY2:
+if six.PY2: # pragma: no cover
     def to_bytes(text):
         return str(text)
 
     def hmac_md4(key, msg):
         return hmac.new(key, msg, md4)
-else:
+else: # pragma: no cover
     def to_bytes(text):
         if not isinstance(text, bytes):
             text = six.b(text)
