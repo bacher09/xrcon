@@ -8,6 +8,7 @@ from .utils import (
     rcon_secure_challenge_packet,
     parse_challenge_response,
     parse_rcon_response,
+    parse_server_addr,
     CHALLENGE_PACKET,
     CHALLENGE_RESPONSE_HEADER,
     RCON_RESPONSE_HEADER,
@@ -160,3 +161,8 @@ class XRcon(object):
 
         if len(params) > 0:
             return params[0]
+
+    @classmethod
+    def create_by_server_str(cls, server_str, *args, **kwargs):
+        host, port = parse_server_addr(server_str)
+        return cls(host, port, *args, **kwargs)

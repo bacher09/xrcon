@@ -80,6 +80,12 @@ class ClientTest(TestCase):
 
         self.assertEqual(rcon.secure_rcon, 0)
 
+    def test_client_create_by_server_str(self):
+        rcon = client.XRcon.create_by_server_str('127.0.0.1:26006', "test")
+        self.assertEqual(rcon.host, '127.0.0.1')
+        self.assertEqual(rcon.port, 26006)
+        self.assertEqual(rcon.password, "test")
+
     @mock.patch('socket.socket', spec=socket.socket)
     def test_client_connect(self, socket_mock):
         rcon = client.XRcon('127.0.0.1', 26000, 'passw', timeout=1)
