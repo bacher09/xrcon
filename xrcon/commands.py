@@ -7,9 +7,9 @@ import six
 from .client import XRcon
 
 
-try:
+try: # pragma: no cover
     from configparser import NoSectionError, NoOptionError, ConfigParser
-except ImportError:
+except ImportError: # pragma: no cover
     from ConfigParser import NoSectionError, NoOptionError, \
         SafeConfigParser as ConfigParser
 
