@@ -1,6 +1,8 @@
 import argparse
 import getpass
 import os.path
+import socket
+import sys
 from .client import XRcon
 
 
@@ -35,13 +37,24 @@ class XRconProgram(object):
             message = "Bad configuratin file: {msg}".format(msg=str(e))
             self.parser.error(message)
 
-        rcon = XRcon.create_by_server_str(cargs['server'], cargs['password'],
-                                          cargs['type'], cargs['timeout'])
-        rcon.connect()
         try:
-            print(rcon.execute(namespace.command, cargs['timeout']))
-        finally:
-            rcon.close()
+            rcon = XRcon \
+                .create_by_server_str(cargs['server'], cargs['password'],
+                                      cargs['type'], cargs['timeout'])
+        except ValueError as e:
+            self.parser.error(str(e))
+
+        try:
+            rcon.connect()
+            try:
+                self.write(rcon.execute(namespace.command, cargs['timeout']))
+            finally:
+                rcon.close()
+        except socket.error as e:
+            self.parser.error(str(e))
+
+    def write(self, message):
+        sys.stdout.write(message)
 
     @staticmethod
     def build_parser():

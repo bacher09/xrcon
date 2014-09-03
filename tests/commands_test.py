@@ -1,5 +1,7 @@
 from .base import TestCase, mock, unittest
 from xrcon.commands import xrcon, XRcon, ConfigParser
+from xrcon.utils import parse_server_addr
+import socket
 import six
 
 
@@ -71,8 +73,14 @@ class XRconCommandTest(TestCase):
 
         self.xrcon_mock = xrcon_patcher.start()
         self.addCleanup(xrcon_patcher.stop)
+
+        def create_by_server_str(server_addr, *args, **kwargs):
+            host, port = parse_server_addr(server_addr)
+            return mock.DEFAULT
+
         self.xrcon_mock.create_by_server_str.return_value = \
             self.xrcon_mock.return_value
+        self.xrcon_mock.create_by_server_str.side_effect = create_by_server_str
 
     def patch_argparse(self):
         self.arg_exit_mock = mock.Mock(spec=[])
@@ -136,3 +144,10 @@ class XRconCommandTest(TestCase):
 
         with self.assertRaises(ExitException):
             xrcon("--config invalid.ini -n corupted2 status".split())
+
+        with self.assertRaises(ExitException):
+            xrcon("-s server:0 -p 1234 status".split())
+
+        self.xrcon_mock.return_value.connect.side_effect = socket.gaierror
+        with self.assertRaises(ExitException):
+            xrcon("-s badhost -p password status".split())
