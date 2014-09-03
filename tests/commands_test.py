@@ -32,6 +32,19 @@ type = 2
 """
 
 
+INVALID_CONFIG = """\
+[corupted]
+server = bad
+password = here
+type = 15
+
+[corupted2]
+server = ::1
+password = 1234
+timeout = bad
+"""
+
+
 class ExitException(Exception):
     pass
 
@@ -74,6 +87,10 @@ class XRconCommandTest(TestCase):
         argparse_patch.start()
         self.addCleanup(argparse_patch.stop)
 
+        filetype_patch = mock.patch('argparse.FileType')
+        self.filetype_mock = filetype_patch.start()
+        self.addCleanup(filetype_patch.stop)
+
     def stop_mocks(self):
         self.read_patcher.stop()
         self.xrcon_patcher.stop()
@@ -96,11 +113,11 @@ class XRconCommandTest(TestCase):
             .assert_called_once_with('127.0.0.1:26001', 'secret', 0, 1.2)
 
     @mock.patch('getpass.getpass')
-    @mock.patch('argparse.FileType')
-    def test_config(self, ftype_mock, getpass_mock):
+    def test_config(self, getpass_mock):
         getpass_mock.return_value = six.u('getpass')
         self.xrcon_mock.return_value.execute.return_value = six.b('Result')
-        ftype_mock.return_value.return_value = six.StringIO(CONFIG_EXAMPLE2)
+        self.filetype_mock.return_value.return_value = \
+            six.StringIO(CONFIG_EXAMPLE2)
         xrcon("--config myconfig.ini -s server -t 2 status"
               .split())
 
@@ -110,3 +127,12 @@ class XRconCommandTest(TestCase):
 
         with self.assertRaises(ExitException):
             xrcon("-n bad_section status".split())
+
+        self.filetype_mock.return_value.return_value = \
+            six.StringIO(INVALID_CONFIG)
+
+        with self.assertRaises(ExitException):
+            xrcon("--config invalid.ini -n corupted status".split())
+
+        with self.assertRaises(ExitException):
+            xrcon("--config invalid.ini -n corupted2 status".split())

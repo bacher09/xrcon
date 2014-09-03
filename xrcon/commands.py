@@ -31,7 +31,7 @@ class XRconProgram(object):
         config = self.parse_config(namespace.config)
         try:
             cargs = self.rcon_args(config, namespace, namespace.name)
-        except (NoOptionError, NoSectionError) as e:
+        except (NoOptionError, NoSectionError, ValueError) as e:
             message = "Bad configuratin file: {msg}".format(msg=str(e))
             self.parser.error(message)
 
@@ -83,6 +83,8 @@ class XRconProgram(object):
 
         cval = getattr(namespace, 'type')
         dct['type'] = cval if cval else config.getint(name, 'type')
+        if dct['type'] not in XRcon.RCON_TYPES:
+            raise ValueError("Invalid rcon type")
 
         cval = getattr(namespace, 'timeout')
         dct['timeout'] = cval if cval else config.getfloat(name, 'timeout')
