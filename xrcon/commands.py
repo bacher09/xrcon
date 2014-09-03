@@ -3,6 +3,7 @@ import getpass
 import os.path
 import socket
 import sys
+import six
 from .client import XRcon
 
 
@@ -47,13 +48,16 @@ class XRconProgram(object):
         try:
             rcon.connect()
             try:
-                self.write(rcon.execute(namespace.command, cargs['timeout']))
+                data = rcon.execute(namespace.command, cargs['timeout'])
+                if data:
+                    self.write(data.decode('utf8'))
             finally:
                 rcon.close()
         except socket.error as e:
             self.parser.error(str(e))
 
     def write(self, message):
+        assert isinstance(message, six.text_type), "Bad text type"
         sys.stdout.write(message)
 
     @staticmethod

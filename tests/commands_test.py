@@ -120,6 +120,10 @@ class XRconCommandTest(TestCase):
         xrcon_mock.create_by_server_str \
             .assert_called_once_with('127.0.0.1:26001', 'secret', 0, 1.2)
 
+        # test empty
+        xrcon_mock.return_value.execute.return_value = None
+        xrcon("-s server -p password -t 2 empty".split())
+
     @mock.patch('getpass.getpass')
     def test_config(self, getpass_mock):
         getpass_mock.return_value = six.u('getpass')
