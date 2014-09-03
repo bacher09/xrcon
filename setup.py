@@ -30,6 +30,7 @@ if lt33():
 
 if lt27():
     tests_require.append('unittest2')
+    requires.append('argparse')
 
 
 ROOT_PATH = os.path.dirname(__file__)
@@ -65,6 +66,10 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Internet",
     ],
+    entry_points="""\
+    [console_scripts]
+    xrcon = xrcon.commands:xrcon
+    """,
     platforms='any',
     keywords=['rcon', 'xonotic', 'nexuiz', 'darkplaces', 'quake'],
     license="LGPL",
