@@ -5,9 +5,10 @@ from .client import XRcon
 
 
 try:
-    from configparser import NoOptionError, ConfigParser
+    from configparser import NoSectionError, NoOptionError, ConfigParser
 except ImportError:
-    from ConfigParser import NoOptionError, SafeConfigParser as ConfigParser
+    from ConfigParser import NoSectionError, NoOptionError, \
+        SafeConfigParser as ConfigParser
 
 
 class XRconProgram(object):
@@ -28,11 +29,16 @@ class XRconProgram(object):
 
     def execute(self, namespace):
         config = self.parse_config(namespace.config)
-        cargs = self.rcon_args(config, namespace, namespace.name)
+        try:
+            cargs = self.rcon_args(config, namespace, namespace.name)
+        except (NoOptionError, NoSectionError) as e:
+            message = "Bad configuratin file: {msg}".format(msg=str(e))
+            self.parser.error(message)
+
         rcon = XRcon.create_by_server_str(cargs['server'], cargs['password'],
                                           cargs['type'], cargs['timeout'])
+        rcon.connect()
         try:
-            rcon.connect()
             print(rcon.execute(namespace.command, cargs['timeout']))
         finally:
             rcon.close()
@@ -59,7 +65,6 @@ class XRconProgram(object):
             config.read([os.path.expanduser(cls.CONFIG_NAME)])
 
         return config
-
 
     @staticmethod
     def rcon_args(config, namespace, name=None):
