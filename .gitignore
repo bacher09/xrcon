@@ -4,6 +4,7 @@
 venv/
 cover/
 dist/
+build/
 *.egg-info
 *.egg
 nosetests.xml
