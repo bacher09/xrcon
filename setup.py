@@ -73,5 +73,5 @@ setup(
     platforms='any',
     keywords=['rcon', 'xonotic', 'nexuiz', 'darkplaces', 'quake'],
     license="LGPL",
-    version="0.1dev"
+    version="0.1"
 )
