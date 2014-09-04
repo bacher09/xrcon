@@ -1,1 +1,1 @@
-include *.rst tests/*.py
+include *.rst tests/*.py LICENSE.txt
