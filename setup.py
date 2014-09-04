@@ -44,6 +44,7 @@ setup(
         'Suppor such games like Xonotic, Nexuiz and other'),
     long_description=long_description,
     author='Slava Bacherikov',
+    author_email='slava@bacher09.org',
     url="https://github.com/bacher09/xrcon",
     packages=["xrcon"],
     install_requires=requires,
@@ -54,7 +55,7 @@ setup(
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         ("License :: OSI Approved ::"
-        "GNU Library or Lesser General Public License (LGPL)"),
+        " GNU Library or Lesser General Public License (LGPL)"),
         "Programming Language :: Python",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.6",
