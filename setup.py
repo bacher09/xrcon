@@ -41,7 +41,7 @@ with open(os.path.join(ROOT_PATH, "README.rst")) as f:
 setup(
     name='xrcon',
     description=('Quake and DarkPlaces rcon client.'
-        'Suppor such games like Xonotic, Nexuiz and other'),
+                 'Suppor such games like Xonotic, Nexuiz and other'),
     long_description=long_description,
     author='Slava Bacherikov',
     author_email='slava@bacher09.org',
@@ -52,10 +52,11 @@ setup(
     test_suite="nose.collector",
     classifiers=[
         "Development Status :: 3 - Alpha",
+        "Environment :: Console",
         "Operating System :: OS Independent",
         "Intended Audience :: Developers",
         ("License :: OSI Approved ::"
-        " GNU Library or Lesser General Public License (LGPL)"),
+         " GNU Library or Lesser General Public License (LGPL)"),
         "Programming Language :: Python",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.6",
@@ -66,6 +67,8 @@ setup(
         "Programming Language :: Python :: 3.4",
         "Topic :: Software Development :: Libraries",
         "Topic :: Internet",
+        "Topic :: Games/Entertainment",
+        "Topic :: Games/Entertainment :: First Person Shooters"
     ],
     entry_points="""\
     [console_scripts]
