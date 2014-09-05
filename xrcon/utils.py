@@ -8,10 +8,14 @@ import re
 md4 = lambda *args, **kw: hashlib.new('MD4', *args, **kw)
 
 
-RCON_PACKET_HEADER = six.b('\xFF' * 4)
-RCON_RESPONSE_HEADER = RCON_PACKET_HEADER + six.b('n')
-CHALLENGE_PACKET = RCON_PACKET_HEADER + six.b('getchallenge')
-CHALLENGE_RESPONSE_HEADER = RCON_PACKET_HEADER + six.b('challenge ')
+QUAKE_PACKET_HEADER = six.b('\xFF' * 4)
+RCON_RESPONSE_HEADER = QUAKE_PACKET_HEADER + six.b('n')
+CHALLENGE_PACKET = QUAKE_PACKET_HEADER + six.b('getchallenge')
+CHALLENGE_RESPONSE_HEADER = QUAKE_PACKET_HEADER + six.b('challenge ')
+PING_Q2_PACKET = QUAKE_PACKET_HEADER + six.b('ping')
+PONG_Q2_PACKET = QUAKE_PACKET_HEADER + six.b('ack')
+PING_Q3_PACKET = six.b('ping')
+PONG_Q3_PACKET = QUAKE_PACKET_HEADER + six.b('disconnect')
 ADDR_STR_RE = re.compile(r"""
     ^(?:
         (?P<host>[^:]+)               # ipv4 address or host name
@@ -22,7 +26,7 @@ ADDR_STR_RE = re.compile(r"""
 
 
 def rcon_nosecure_packet(password, command):
-    return RCON_PACKET_HEADER + six.b('rcon {password} {command}'
+    return QUAKE_PACKET_HEADER + six.b('rcon {password} {command}'
         .format(password=password, command=command))
 
 
@@ -49,7 +53,7 @@ def rcon_secure_time_packet(password, command):
     key = hmac_md4(password, "{time:6f} {command}"
             .format(time=cur_time, command=command)).digest()
     return six.b('').join([
-        RCON_PACKET_HEADER,
+        QUAKE_PACKET_HEADER,
         six.b('srcon HMAC-MD4 TIME '),
         key,
         six.b(' {time:6f} {command}'.format(time=cur_time, command=command))
@@ -68,7 +72,7 @@ def rcon_secure_challenge_packet(password, challenge, command):
     hmac_key = six.b(' ').join([challenge, command])
     key = hmac_md4(password, hmac_key).digest()
     return six.b('').join([
-        RCON_PACKET_HEADER,
+        QUAKE_PACKET_HEADER,
         six.b('srcon HMAC-MD4 CHALLENGE '),
         key,
         six.b(' '),

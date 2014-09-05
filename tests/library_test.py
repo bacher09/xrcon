@@ -64,6 +64,92 @@ class UtilsTest(TestCase):
             utils.parse_server_addr('[::1]:00')
 
 
+class QuakeProtocolTest(TestCase):
+
+    def test_client_create_by_server_str(self):
+        qc = client.QuakeProtocol.create_by_server_str('127.0.0.1:26006')
+        self.assertEqual(qc.host, '127.0.0.1')
+        self.assertEqual(qc.port, 26006)
+
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_connect(self, socket_mock):
+        qc = client.QuakeProtocol('127.0.0.1', 26000, timeout=1)
+        qc.connect()
+        socket_mock.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
+        socket_mock.return_value \
+            .connect.assert_called_once_with(('127.0.0.1', 26000))
+
+        socket_mock.return_value.settimeout.assert_called_once_with(1)
+        qc.close()
+        self.assertTrue(socket_mock.return_value.close.called)
+
+        with self.assertRaises(client.NotConnected):
+            qc.close()
+
+    @unittest.skipUnless(socket.has_ipv6, "IPv6 is not supported")
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_connect_ipv6(self, socket_mock):
+        qc = client.QuakeProtocol('::1', 26000)
+        qc.connect()
+        socket_mock.assert_called_once_with(socket.AF_INET6, socket.SOCK_DGRAM)
+        qc.close()
+        self.assertTrue(socket_mock.return_value.close.called)
+
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_getchallenge(self, socket_mock):
+        socket_mock.return_value.recv.side_effect = [
+            six.b('\xFF\xFF\xFF\xFFBAD PACKET'),
+            six.b('\xff\xff\xff\xffchallenge 11111111111\x00vle ')
+        ]
+        qc = client.QuakeProtocol('127.0.0.1', 26000)
+        qc.connect()
+        challenge = qc.getchallenge()
+        self.assertEqual(challenge, six.b('11111111111'))
+        qc.close()
+
+    @mock.patch('time.time')
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_client_getchallenge_timeout(self, socket_mock, time_mock):
+        time_mock.return_value = 100.0
+
+        def recv(num):
+            time_mock.return_value += 20
+            return six.b('\xFF\xFF\xFF\xFFBAD PACKET')
+
+        socket_mock.return_value.recv.side_effect = recv
+        qc= client.QuakeProtocol('127.0.0.1', 26000)
+        qc.connect()
+        with self.assertRaises(socket.timeout):
+            qc.getchallenge()
+
+    @mock.patch('time.time')
+    @mock.patch('socket.socket', spec=socket.socket)
+    def test_ping(self, socket_mock, time_mock):
+        time_mock.side_effect = [100.0, 100.02]
+        qc = client.QuakeProtocol('127.0.0.1', 26000)
+        qc.read_iterator = mock.MagicMock()
+        qc.read_iterator.return_value = iter([utils.PONG_Q2_PACKET])
+        qc.connect()
+        self.assertAlmostEqual(qc.ping2(), 0.02)
+        socket_mock.return_value \
+            .send.assert_called_once_with(utils.PING_Q2_PACKET)
+
+        socket_mock.reset_mock()
+        qc.read_iterator.reset_mock()
+        qc.read_iterator.side_effect = socket.timeout
+        time_mock.side_effect = [100.0]
+        self.assertIsNone(qc.ping2())
+
+        socket_mock.reset_mock()
+        qc.read_iterator.side_effect = None
+        time_mock.side_effect = [100.0, 100.03]
+        qc.read_iterator.return_value = iter([utils.PONG_Q3_PACKET])
+        self.assertAlmostEqual(qc.ping3(), 0.03)
+        socket_mock.return_value \
+            .send.assert_called_once_with(utils.PING_Q3_PACKET)
+        qc.close()
+
+
 class ClientTest(TestCase):
 
     def test_validate_secure_rcon(self):
@@ -85,57 +171,6 @@ class ClientTest(TestCase):
         self.assertEqual(rcon.host, '127.0.0.1')
         self.assertEqual(rcon.port, 26006)
         self.assertEqual(rcon.password, "test")
-
-    @mock.patch('socket.socket', spec=socket.socket)
-    def test_client_connect(self, socket_mock):
-        rcon = client.XRcon('127.0.0.1', 26000, 'passw', timeout=1)
-        rcon.connect()
-        socket_mock.assert_called_once_with(socket.AF_INET, socket.SOCK_DGRAM)
-        socket_mock.return_value \
-            .connect.assert_called_once_with(('127.0.0.1', 26000))
-
-        socket_mock.return_value.settimeout.assert_called_once_with(1)
-        rcon.close()
-        self.assertTrue(socket_mock.return_value.close.called)
-
-        with self.assertRaises(client.NotConnected):
-            rcon.close()
-
-    @unittest.skipUnless(socket.has_ipv6, "IPv6 is not supported")
-    @mock.patch('socket.socket', spec=socket.socket)
-    def test_client_connect_ipv6(self, socket_mock):
-        rcon = client.XRcon('::1', 26000, 'passw')
-        rcon.connect()
-        socket_mock.assert_called_once_with(socket.AF_INET6, socket.SOCK_DGRAM)
-        rcon.close()
-        self.assertTrue(socket_mock.return_value.close.called)
-
-    @mock.patch('socket.socket', spec=socket.socket)
-    def test_client_getchallenge(self, socket_mock):
-        socket_mock.return_value.recv.side_effect = [
-            six.b('\xFF\xFF\xFF\xFFBAD PACKET'),
-            six.b('\xff\xff\xff\xffchallenge 11111111111\x00vle ')
-        ]
-        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
-        rcon.connect()
-        challenge = rcon.getchallenge()
-        self.assertEqual(challenge, six.b('11111111111'))
-        rcon.close()
-
-    @mock.patch('time.time')
-    @mock.patch('socket.socket', spec=socket.socket)
-    def test_client_getchallenge_timeout(self, socket_mock, time_mock):
-        time_mock.return_value = 100.0
-
-        def recv(num):
-            time_mock.return_value += 20
-            return six.b('\xFF\xFF\xFF\xFFBAD PACKET')
-
-        socket_mock.return_value.recv.side_effect = recv
-        rcon = client.XRcon('127.0.0.1', 26000, 'passw')
-        rcon.connect()
-        with self.assertRaises(socket.timeout):
-            rcon.getchallenge()
 
     @mock.patch('time.time')
     @mock.patch('socket.socket', spec=socket.socket)
