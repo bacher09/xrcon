@@ -1,6 +1,7 @@
 from setuptools import setup
 import os.path
 import sys
+import re
 
 
 requires = [
@@ -36,6 +37,10 @@ if lt27():
 ROOT_PATH = os.path.dirname(__file__)
 with open(os.path.join(ROOT_PATH, "README.rst")) as f:
     long_description = f.read()
+
+
+with open(os.path.join(ROOT_PATH, 'xrcon', '__init__.py')) as f:
+    VERSION = re.match(r".*__version__\s*=\s*'(.*?)'", f.read(), re.S).group(1)
 
 
 setup(
@@ -77,5 +82,5 @@ setup(
     platforms='any',
     keywords=['rcon', 'xonotic', 'nexuiz', 'darkplaces', 'quake'],
     license="LGPL",
-    version="0.2dev"
+    version=VERSION
 )
