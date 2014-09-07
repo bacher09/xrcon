@@ -9,13 +9,17 @@ from .utils import (
     parse_challenge_response,
     parse_rcon_response,
     parse_server_addr,
+    parse_status_packet,
+    Player,
     CHALLENGE_PACKET,
     CHALLENGE_RESPONSE_HEADER,
     RCON_RESPONSE_HEADER,
     PING_Q2_PACKET,
     PONG_Q2_PACKET,
     PING_Q3_PACKET,
-    PONG_Q3_PACKET
+    PONG_Q3_PACKET,
+    QUAKE_STATUS_PACKET,
+    STATUS_RESPONSE_HEADER
 )
 
 
@@ -38,6 +42,7 @@ class QuakeProtocol(object):
 
     CHALLENGE_TIMEOUT = 3
     MAX_PACKET_SIZE = 1399
+    player_factory = Player.parse_player
 
     def __init__(self, host, port, timeout=0.7):
         self.host = host
@@ -85,6 +90,20 @@ class QuakeProtocol(object):
         for packet in self.read_iterator(self.CHALLENGE_TIMEOUT):
             if packet.startswith(CHALLENGE_RESPONSE_HEADER):
                 return parse_challenge_response(packet)
+
+    @connection_required
+    def getstatus_packet(self):
+        self.sock.send(QUAKE_STATUS_PACKET)
+        # wait challenge response
+        for packet in self.read_iterator(self.CHALLENGE_TIMEOUT):
+            if packet.startswith(STATUS_RESPONSE_HEADER):
+                return packet
+
+    def getstatus(self):
+        packet = self.getstatus_packet()
+        if packet is None:
+            return None
+        return parse_status_packet(packet, self.player_factory)
 
     def _ping(self, ping_packet, pong_packet, timeout=1):
         self.sock.send(ping_packet)
