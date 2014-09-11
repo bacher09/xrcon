@@ -1,8 +1,10 @@
 import time
+import socket
+import struct
 import hashlib
 import hmac
-import six
 import re
+import six
 
 
 md4 = lambda *args, **kw: hashlib.new('MD4', *args, **kw)
@@ -12,6 +14,7 @@ QUAKE_PACKET_HEADER = six.b('\xFF' * 4)
 RCON_RESPONSE_HEADER = QUAKE_PACKET_HEADER + six.b('n')
 CHALLENGE_PACKET = QUAKE_PACKET_HEADER + six.b('getchallenge')
 CHALLENGE_RESPONSE_HEADER = QUAKE_PACKET_HEADER + six.b('challenge ')
+MASTER_RESPONSE_HEADER = QUAKE_PACKET_HEADER + six.b('getserversResponse')
 PING_Q2_PACKET = QUAKE_PACKET_HEADER + six.b('ping')
 PONG_Q2_PACKET = QUAKE_PACKET_HEADER + six.b('ack')
 PING_Q3_PACKET = six.b('ping')
@@ -178,3 +181,23 @@ def parse_status_packet(status_packet, player_factory=Player.parse_player):
     server_vars, players_dat = parts[0], parts[1:]
     players = list(player_factory(playerd) for playerd in players_dat)
     return parse_server_vars(server_vars), players
+
+
+def iter_blocks(data, count):
+    for i in range(0, len(data), count):
+        yield data[i:i + count]
+
+
+def parse_servers_response(servers_packet):
+    for server_data in iter_blocks(servers_packet[22:], 7):
+        if server_data == six.b('\\EOT\x00\x00\x00'):
+            raise StopIteration
+
+        s, server_ip, server_port = struct.unpack('>c4sH', server_data)
+        if s != six.b('\\'):
+            raise ValueError('Bad packet format')
+        server_ip = socket.inet_ntoa(server_ip)
+
+        yield server_ip, server_port
+
+    raise ValueError('Packet have no EOT signature')

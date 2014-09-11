@@ -132,9 +132,40 @@ class UtilsTest(TestCase):
         self.assertEqual(players[2].name, six.b('me'))
         # test repr not raises errors
         players_r = repr(players)
-        
+
         with self.assertRaises(ValueError):
             utils.parse_status_packet(b('BAD DATA' * 40))
+
+    def test_parse_servers_response(self):
+        good_packet = six.b(
+            '\xff\xff\xff\xffgetserversResponse'
+            '\\\x82\x957\x16e\xbd'
+            '\\\xc8+\xc0|e\x92'
+            '\\zcv\x05e\x91'
+            '\\EOT\x00\x00\x00'
+        )
+        self.assertCountEqual(utils.parse_servers_response(good_packet), [
+            ('130.149.55.22', 26045),
+            ('200.43.192.124', 26002),
+            ('122.99.118.5', 26001)
+        ])
+
+        bad_packet1 = six.b(
+            '\xff\xff\xff\xffgetserversResponse'
+            '\\zcv\x05e\x91'
+        )
+
+        with self.assertRaises(ValueError):
+            list(utils.parse_servers_response(bad_packet1))
+
+        bad_packet2 = six.b(
+            '\xff\xff\xff\xffgetserversResponse'
+            'tzcv\x05e\x91'
+            '\\EOT\x00\x00\x00'
+        )
+
+        with self.assertRaises(ValueError):
+            list(utils.parse_servers_response(bad_packet2))
 
 
 class QuakeProtocolTest(TestCase):
