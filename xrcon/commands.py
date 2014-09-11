@@ -48,7 +48,7 @@ class XRconProgram(object):
         try:
             rcon.connect()
             try:
-                data = rcon.execute(namespace.command, cargs['timeout'])
+                data = rcon.execute(self.command(namespace), cargs['timeout'])
                 if data:
                     self.write(data.decode('utf8'))
             finally:
@@ -61,6 +61,10 @@ class XRconProgram(object):
         sys.stdout.write(message)
 
     @staticmethod
+    def command(namespace):
+        return six.u(' ').join(namespace.command)
+
+    @staticmethod
     def build_parser():
         parser = argparse.ArgumentParser(description='Executes rcon command')
         parser.add_argument('--config', type=argparse.FileType('r'))
@@ -69,7 +73,7 @@ class XRconProgram(object):
         parser.add_argument('-s', '--server')
         parser.add_argument('-p', '--password')
         parser.add_argument('-t', '--type', type=int, choices=XRcon.RCON_TYPES)
-        parser.add_argument('command')
+        parser.add_argument('command', nargs='+')
         return parser
 
     @classmethod

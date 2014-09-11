@@ -124,6 +124,12 @@ class XRconCommandTest(TestCase):
         xrcon_mock.return_value.execute.return_value = None
         xrcon("-s server -p password -t 2 empty".split())
 
+        # test multiple
+        xrcon_mock.return_value.execute.reset_mock()
+        xrcon("-s server -p password -t 2 sv_cmd help".split())
+        xrcon_mock.return_value.execute \
+            .assert_called_once_with('sv_cmd help', 1.2)
+
     @mock.patch('getpass.getpass')
     def test_config(self, getpass_mock):
         getpass_mock.return_value = six.u('getpass')
