@@ -1,6 +1,5 @@
 from setuptools import setup
 import os.path
-import sys
 import re
 
 
@@ -13,25 +12,6 @@ tests_require = [
     'nose>=1.0',
     'coverage',
 ]
-
-
-def lt27():
-    v = sys.version_info
-    return (v[0], v[1]) < (2, 7)
-
-
-def lt33():
-    v = sys.version_info
-    return (v[0], v[1]) < (3, 3)
-
-
-if lt33():
-    tests_require.append('mock')
-
-
-if lt27():
-    tests_require.append('unittest2')
-    requires.append('argparse')
 
 
 ROOT_PATH = os.path.dirname(__file__)
@@ -64,12 +44,12 @@ setup(
          " GNU Library or Lesser General Public License (LGPL)"),
         "Programming Language :: Python",
         "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.2",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries",
         "Topic :: Internet",
         "Topic :: Games/Entertainment",

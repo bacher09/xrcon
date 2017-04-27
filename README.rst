@@ -21,7 +21,7 @@ Features
   * Support both IPv4 and IPv6 connections.
   * Bundled console client.
   * Well tested, test coverage near 100%.
-  * Works with python 2.6+, 3.2+.
+  * Works with python 2.7, 3.3+.
 
 Installation
 ------------
