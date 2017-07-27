@@ -1,21 +1,12 @@
 import sys
 import six
+import unittest
 
 
 try:
     from unittest import mock
 except ImportError:
     import mock
-
-
-def py26_gt():
-    return sys.version_info[:2] > (2, 6)
-
-
-if py26_gt():
-    import unittest
-else:
-    import unittest2 as unittest
 
 
 class TestCase(unittest.TestCase):
