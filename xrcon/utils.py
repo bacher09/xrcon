@@ -7,9 +7,6 @@ import re
 import six
 
 
-md4 = lambda *args, **kw: hashlib.new('MD4', *args, **kw)
-
-
 QUAKE_PACKET_HEADER = six.b('\xFF' * 4)
 RCON_RESPONSE_HEADER = QUAKE_PACKET_HEADER + six.b('n')
 CHALLENGE_PACKET = QUAKE_PACKET_HEADER + six.b('getchallenge')
@@ -30,18 +27,22 @@ ADDR_STR_RE = re.compile(r"""
     """, re.VERBOSE)
 
 
+def md4(*args, **kwargs):
+    return hashlib.new('MD4', *args, **kwargs)
+
+
 def rcon_nosecure_packet(password, command):
-    return QUAKE_PACKET_HEADER + six.b('rcon {password} {command}'
-        .format(password=password, command=command))
+    return QUAKE_PACKET_HEADER + six.b(
+        'rcon {password} {command}'.format(password=password, command=command))
 
 
-if six.PY2: # pragma: no cover
+if six.PY2:  # pragma: no cover
     def to_bytes(text):
         return str(text)
 
     def hmac_md4(key, msg):
         return hmac.new(key, msg, md4)
-else: # pragma: no cover
+else:  # pragma: no cover
     def to_bytes(text):
         if not isinstance(text, bytes):
             text = six.b(text)
@@ -55,13 +56,14 @@ else: # pragma: no cover
 
 def rcon_secure_time_packet(password, command):
     cur_time = time.time()
-    key = hmac_md4(password, "{time:6f} {command}"
-            .format(time=cur_time, command=command)).digest()
+    cmd_and_time = "{time:6f} {cmd}".format(time=cur_time, cmd=command)
+    key = hmac_md4(password, cmd_and_time).digest()
     return six.b('').join([
         QUAKE_PACKET_HEADER,
         six.b('srcon HMAC-MD4 TIME '),
         key,
-        six.b(' {time:6f} {command}'.format(time=cur_time, command=command))
+        six.b(' '),
+        six.b(cmd_and_time)
     ])
 
 
@@ -125,7 +127,7 @@ def parse_server_addr(str_addr, default_port=26000):
     if port is None:
         port = default_port
     else:
-        port = int(port) # Caution: could raise ValueEror or TypeError
+        port = int(port)  # Caution: could raise ValueEror or TypeError
 
     if port == 0:
         raise ValueError("Port can't be zero")
@@ -173,7 +175,7 @@ class Player(object):
 
 def parse_status_packet(status_packet, player_factory=Player.parse_player):
     data = status_packet[len(STATUS_RESPONSE_HEADER):]
-    parts = data.split(six.b('\n'))[:-1] # split server vars and player
+    parts = data.split(six.b('\n'))[:-1]  # split server vars and player
     # sections and remove last '\n' symbol
     if len(parts) < 1:
         raise ValueError("Bad packet")

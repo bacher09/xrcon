@@ -1,4 +1,4 @@
-from .base import TestCase, mock, unittest
+from .base import TestCase, mock
 from xrcon.commands import xrcon, XRcon, ConfigParser
 from xrcon.utils import parse_server_addr
 import socket

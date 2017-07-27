@@ -132,6 +132,7 @@ class UtilsTest(TestCase):
         self.assertEqual(players[2].name, six.b('me'))
         # test repr not raises errors
         players_r = repr(players)
+        self.assertIsNotNone(players_r)
 
         with self.assertRaises(ValueError):
             utils.parse_status_packet(b('BAD DATA' * 40))

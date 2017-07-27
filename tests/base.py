@@ -1,4 +1,3 @@
-import sys
 import six
 import unittest
 
@@ -6,7 +5,7 @@ import unittest
 try:
     from unittest import mock
 except ImportError:
-    import mock
+    import mock  # NOQA
 
 
 class TestCase(unittest.TestCase):

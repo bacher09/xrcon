@@ -143,7 +143,6 @@ class XRcon(QuakeProtocol):
         RCON_NOSECURE, RCON_SECURE_TIME, RCON_SECURE_CHALLENGE
     ])
 
-
     _secure_rcon = RCON_SECURE_TIME
 
     def __init__(self, host, port, password, secure_rcon=RCON_SECURE_TIME,
@@ -151,7 +150,7 @@ class XRcon(QuakeProtocol):
         """ host --- ip address or domain of server
         port --- udp port of server
         password --- rcon password
-        secure_rcon --- type of rcon connection, default secure rcon, use 0 
+        secure_rcon --- type of rcon connection, default secure rcon, use 0
         for old quake servers
         timeout --- socket timeout
         """
