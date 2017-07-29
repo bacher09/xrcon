@@ -57,7 +57,7 @@ setup(
     ],
     entry_points="""\
     [console_scripts]
-    xrcon = xrcon.commands:xrcon
+    xrcon = xrcon.commands:XRconProgram.start
     """,
     platforms='any',
     keywords=['rcon', 'xonotic', 'nexuiz', 'darkplaces', 'quake'],

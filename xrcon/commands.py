@@ -112,6 +112,11 @@ class XRconProgram(object):
 
         return dct
 
+    @classmethod
+    def start(cls, args=None):
+        cls().run(args=args)
+
+
 
 def xrcon(args=None):
     XRconProgram().run(args)

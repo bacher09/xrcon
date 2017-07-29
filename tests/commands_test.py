@@ -1,5 +1,5 @@
 from .base import TestCase, mock
-from xrcon.commands import xrcon, XRcon, ConfigParser
+from xrcon.commands import XRcon, XRconProgram, ConfigParser
 from xrcon.utils import parse_server_addr
 import socket
 import six
@@ -57,6 +57,7 @@ class XRconCommandTest(TestCase):
         self.patch_xrcon()
         self.patch_configparser()
         self.patch_argparse()
+        self.xrcon = XRconProgram.start
 
     def patch_configparser(self):
         def read_fun(self, names):
@@ -106,7 +107,7 @@ class XRconCommandTest(TestCase):
     def test_simple(self):
         xrcon_mock = self.xrcon_mock
         xrcon_mock.return_value.execute.return_value = six.b('Result')
-        xrcon("-s server -p password -t 2 status".split())
+        self.xrcon("-s server -p password -t 2 status".split())
         self.assertTrue(self.read_mock.called)
         xrcon_mock.return_value.execute.assert_called_once_with('status', 1.2)
 
@@ -115,18 +116,18 @@ class XRconCommandTest(TestCase):
 
         xrcon_mock.reset_mock()
         xrcon_mock.create_by_server_str.return_value = xrcon_mock.return_value
-        xrcon("-n minsta status".split())
+        self.xrcon("-n minsta status".split())
         xrcon_mock.return_value.execute.assert_called_once_with('status', 1.2)
         xrcon_mock.create_by_server_str \
             .assert_called_once_with('127.0.0.1:26001', 'secret', 0, 1.2)
 
         # test empty
         xrcon_mock.return_value.execute.return_value = None
-        xrcon("-s server -p password -t 2 empty".split())
+        self.xrcon("-s server -p password -t 2 empty".split())
 
         # test multiple
         xrcon_mock.return_value.execute.reset_mock()
-        xrcon("-s server -p password -t 2 sv_cmd help".split())
+        self.xrcon("-s server -p password -t 2 sv_cmd help".split())
         xrcon_mock.return_value.execute \
             .assert_called_once_with('sv_cmd help', 1.2)
 
@@ -136,28 +137,27 @@ class XRconCommandTest(TestCase):
         self.xrcon_mock.return_value.execute.return_value = six.b('Result')
         self.filetype_mock.return_value.return_value = \
             six.StringIO(CONFIG_EXAMPLE2)
-        xrcon("--config myconfig.ini -s server -t 2 status"
-              .split())
+        self.xrcon("--config myconfig.ini -s server -t 2 status".split())
 
     def test_invalid(self):
         with self.assertRaises(ExitException):
-            xrcon("-s server -p passw -t 3 status".split())
+            self.xrcon("-s server -p passw -t 3 status".split())
 
         with self.assertRaises(ExitException):
-            xrcon("-n bad_section status".split())
+            self.xrcon("-n bad_section status".split())
 
         self.filetype_mock.return_value.return_value = \
             six.StringIO(INVALID_CONFIG)
 
         with self.assertRaises(ExitException):
-            xrcon("--config invalid.ini -n corupted status".split())
+            self.xrcon("--config invalid.ini -n corupted status".split())
 
         with self.assertRaises(ExitException):
-            xrcon("--config invalid.ini -n corupted2 status".split())
+            self.xrcon("--config invalid.ini -n corupted2 status".split())
 
         with self.assertRaises(ExitException):
-            xrcon("-s server:0 -p 1234 status".split())
+            self.xrcon("-s server:0 -p 1234 status".split())
 
         self.xrcon_mock.return_value.connect.side_effect = socket.gaierror
         with self.assertRaises(ExitException):
-            xrcon("-s badhost -p password status".split())
+            self.xrcon("-s badhost -p password status".split())
