@@ -1,4 +1,5 @@
-from .base import TestCase, mock
+from .base import mock
+from .base_command_test import BaseCommandTest, ExitException
 from xrcon.commands import XRcon, XRconProgram, ConfigParser
 from xrcon.utils import parse_server_addr
 import socket
@@ -47,16 +48,12 @@ timeout = bad
 """
 
 
-class ExitException(Exception):
-    pass
-
-
-class XRconCommandTest(TestCase):
+class XRconCommandTest(BaseCommandTest):
 
     def setUp(self):
+        super(XRconCommandTest, self).setUp()
         self.patch_xrcon()
         self.patch_configparser()
-        self.patch_argparse()
         self.xrcon = XRconProgram.start
 
     def patch_configparser(self):
@@ -82,23 +79,6 @@ class XRconCommandTest(TestCase):
         self.xrcon_mock.create_by_server_str.return_value = \
             self.xrcon_mock.return_value
         self.xrcon_mock.create_by_server_str.side_effect = create_by_server_str
-
-    def patch_argparse(self):
-        self.arg_exit_mock = mock.Mock(spec=[])
-        self.arg_error_mock = mock.Mock(spec=[])
-        self.arg_exit_mock.side_effect = ExitException
-        self.arg_error_mock.side_effect = ExitException
-        argparse_patch = mock.patch.multiple(
-            'argparse.ArgumentParser',
-            exit=self.arg_exit_mock,
-            error=self.arg_error_mock
-        )
-        argparse_patch.start()
-        self.addCleanup(argparse_patch.stop)
-
-        filetype_patch = mock.patch('argparse.FileType')
-        self.filetype_mock = filetype_patch.start()
-        self.addCleanup(filetype_patch.stop)
 
     def stop_mocks(self):
         self.read_patcher.stop()
