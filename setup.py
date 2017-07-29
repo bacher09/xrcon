@@ -58,6 +58,7 @@ setup(
     entry_points="""\
     [console_scripts]
     xrcon = xrcon.commands:XRconProgram.start
+    xping = xrcon.commands:XPingProgram.start
     """,
     platforms='any',
     keywords=['rcon', 'xonotic', 'nexuiz', 'darkplaces', 'quake'],
