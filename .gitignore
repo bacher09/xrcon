@@ -10,3 +10,4 @@ build/
 nosetests.xml
 !.gitignore
 !.travis.yml
+!.appveyor.yml

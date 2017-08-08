@@ -1,5 +1,6 @@
 from setuptools import setup
 import os.path
+import sys
 import re
 
 
@@ -12,6 +13,10 @@ tests_require = [
     'nose>=1.0',
     'coverage',
 ]
+
+
+if sys.version_info[0] == 2:
+    tests_require.append('mock')
 
 
 ROOT_PATH = os.path.dirname(__file__)
