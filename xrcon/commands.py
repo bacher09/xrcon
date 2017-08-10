@@ -3,12 +3,13 @@ import getpass
 import os.path
 import socket
 import select
+import errno
 import math
 import time
 import sys
 import six
 from .client import XRcon
-from .utils import PING_Q2_PACKET, PONG_Q2_PACKET
+from .utils import PING_Q2_PACKET, PONG_Q2_PACKET, MAX_PACKET_SIZE
 
 
 try:  # pragma: no cover
@@ -124,7 +125,9 @@ class XRconProgram(object):
 
     @classmethod
     def start(cls, args=None):
-        cls().run(args=args)
+        obj = cls()
+        obj.run(args=args)
+        return obj
 
 
 class XPingProgram(object):
@@ -230,9 +233,16 @@ class XPingProgram(object):
     def get_statistics(self):
         rtt_min = 0.0 if self.rtt_min is None else self.rtt_min
         rtt_max = 0.0 if self.rtt_max is None else self.rtt_max
-        packets_received = self.packets_received
-        rtt_avg = self.rtt_sum / packets_received
-        std_dev = math.sqrt((self.rtt_sum2 / packets_received) - rtt_avg ** 2)
+        rtt_avg = self.rtt_sum / self.packets_received
+        # calc stddev
+        a = self.rtt_sum2 / self.packets_received
+        b = rtt_avg ** 2
+        if a > b:
+            std_dev = math.sqrt(a - b)
+        else:
+            # seems we have float point rounding error
+            # most likely for this case stddev is near zero
+            std_dev = 0
         return rtt_min, rtt_avg, rtt_max, std_dev
 
     def do_ping(self, count=0, interval=1.0):
@@ -288,15 +298,25 @@ class XPingProgram(object):
         start_time = monotonic_time()
         rlst, _, _ = select.select([self.sock.fileno()], [], [], timeout)
         if rlst:
-            data, addr = self.sock.recvfrom(1400)
-            if data == PONG_Q2_PACKET and addr == self.addr:
-                end_time = monotonic_time()
-                timeout -= end_time - start_time
-                return True, timeout
-            else:
-                end_time = monotonic_time()
-                timeout -= end_time - start_time
-                return False, timeout
+            try:
+                data, addr = self.sock.recvfrom(MAX_PACKET_SIZE)
+                if data == PONG_Q2_PACKET and addr == self.addr:
+                    end_time = monotonic_time()
+                    timeout -= end_time - start_time
+                    return True, timeout
+                else:
+                    end_time = monotonic_time()
+                    timeout -= end_time - start_time
+                    return False, timeout
+            except socket.error as e:  # use BlockingIOError in python 3
+                if e.errno != errno.EAGAIN:
+                    raise
+                # select returned that socket is ready for reading but during
+                # recvfrom we get error that there is no data in socket buffer.
+                # this might happen in some rare cases
+                # https://stackoverflow.com/questions/5351994/will-read-ever-block-after-select
+                # https://stackoverflow.com/questions/23577888/can-i-guarantee-that-recv-will-not-block-after-select-reports-that-the-socke
+                return False, 0
         else:
             return False, 0
 
@@ -362,4 +382,6 @@ class XPingProgram(object):
 
     @classmethod
     def start(cls, args=None):
-        cls().run(args=args)
+        obj = cls()
+        obj.run(args=args)
+        return obj

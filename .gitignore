@@ -8,6 +8,7 @@ build/
 *.egg-info
 *.egg
 nosetests.xml
+htmlcov
 !.gitignore
 !.travis.yml
 !.appveyor.yml

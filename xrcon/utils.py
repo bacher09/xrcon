@@ -7,6 +7,7 @@ import re
 import six
 
 
+MAX_PACKET_SIZE = 1400
 QUAKE_PACKET_HEADER = six.b('\xFF' * 4)
 RCON_RESPONSE_HEADER = QUAKE_PACKET_HEADER + six.b('n')
 CHALLENGE_PACKET = QUAKE_PACKET_HEADER + six.b('getchallenge')

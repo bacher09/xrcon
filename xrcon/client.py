@@ -19,7 +19,8 @@ from .utils import (
     PING_Q3_PACKET,
     PONG_Q3_PACKET,
     QUAKE_STATUS_PACKET,
-    STATUS_RESPONSE_HEADER
+    STATUS_RESPONSE_HEADER,
+    MAX_PACKET_SIZE
 )
 
 
@@ -41,7 +42,6 @@ def connection_required(fun):
 class QuakeProtocol(object):
 
     CHALLENGE_TIMEOUT = 3
-    MAX_PACKET_SIZE = 1399
     player_factory = Player.parse_player
 
     def __init__(self, host, port, timeout=0.7):
@@ -68,7 +68,7 @@ class QuakeProtocol(object):
     def read_iterator(self, timeout=3):
         timeout_time = time.time() + timeout
         while time.time() < timeout_time:
-            yield self.sock.recv(self.MAX_PACKET_SIZE)
+            yield self.sock.recv(MAX_PACKET_SIZE)
 
         raise socket.timeout("Read timeout")
 
