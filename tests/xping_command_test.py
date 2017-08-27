@@ -53,6 +53,11 @@ class XPingCommandTest(BaseCommandTest):
         self.sleep_mock = sleep_patch.start()
         self.addCleanup(sleep_patch.stop)
 
+    def start_xping(self, args):
+        obj = XPingProgram()
+        obj.run(args)
+        return obj
+
     def test_statistics(self):
         xping = XPingProgram()
         rtt_vals = [0.15, 0.12, 0.13, 0.14]
@@ -182,7 +187,7 @@ class XPingCommandTest(BaseCommandTest):
         self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
         self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
 
-        obj = XPingProgram.start("-p 26001 -c 5 someserver.example".split())
+        obj = self.start_xping("-p 26001 -c 5 someserver.example".split())
 
         self.assertEqual(self.socket_mock.return_value.recvfrom.call_count, 5)
         self.assertEqual(obj.packets_lost, 0)
@@ -220,7 +225,7 @@ class XPingCommandTest(BaseCommandTest):
         self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
 
         # start test
-        obj = XPingProgram.start("someserver.example".split())
+        obj = self.start_xping("someserver.example".split())
         # evalute result
         self.assertEqual(self.socket_mock.return_value.recvfrom.call_count, 20)
         self.assertEqual(obj.packets_lost, 0)
@@ -262,7 +267,7 @@ class XPingCommandTest(BaseCommandTest):
 
         self.select_mock.side_effect = select_side_effect
         # start test
-        obj = XPingProgram.start("-c 10 someserver.example".split())
+        obj = self.start_xping("-c 10 someserver.example".split())
         # evalute result
         self.assertEqual(obj.packets_lost, 5)
         self.assertEqual(obj.packets_received, 5)
@@ -302,7 +307,7 @@ class XPingCommandTest(BaseCommandTest):
         self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
         self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
         # start test
-        obj = XPingProgram.start("-c 20 someserver.example".split())
+        obj = self.start_xping("-c 20 someserver.example".split())
         # evalute result
         self.assertEqual(obj.packets_lost, 10)
         self.assertEqual(obj.packets_received, 10)
@@ -328,7 +333,7 @@ class XPingCommandTest(BaseCommandTest):
         self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
         # start test
         with self.assertRaises(socket.error):
-            XPingProgram.start("someserver.example".split())
+            self.start_xping("someserver.example".split())
 
     def test_command_receive_bad_packets(self):
         self.getaddrinfo_mock.return_value = [(
@@ -363,7 +368,7 @@ class XPingCommandTest(BaseCommandTest):
         self.socket_mock.return_value.sendto.side_effect = sendto_mock
         self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
         # start test
-        obj = XPingProgram.start("-c 10 someserver.example".split())
+        obj = self.start_xping("-c 10 someserver.example".split())
         # evalute result
         self.assertEqual(obj.packets_lost, 0)
         self.assertEqual(obj.packets_received, 10)

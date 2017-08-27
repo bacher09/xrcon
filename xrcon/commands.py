@@ -25,7 +25,27 @@ else:   # pragma: no cover
     monotonic_time = time.time
 
 
-class XRconProgram(object):
+class BaseProgram(object):
+
+    description = None
+
+    def __init__(self):
+        self.parser = self.build_parser()
+
+    def run(self, args=None):  # pragma: no cover
+        raise NotImplementedError
+
+    @classmethod
+    def build_parser(cls):
+        parser = argparse.ArgumentParser(description=cls.description)
+        return parser
+
+    @classmethod
+    def start(cls, args=None):
+        cls().run(args)
+
+
+class XRconProgram(BaseProgram):
 
     CONFIG_DEFAULTS = {
         'timeout': '0.7',
@@ -34,8 +54,7 @@ class XRconProgram(object):
 
     CONFIG_NAME = "~/.xrcon.ini"
 
-    def __init__(self):
-        self.parser = self.build_parser()
+    description = 'Executes rcon command'
 
     def run(self, args=None):
         namespace = self.parser.parse_args(args)
@@ -75,9 +94,9 @@ class XRconProgram(object):
     def command(namespace):
         return six.u(' ').join(namespace.command)
 
-    @staticmethod
-    def build_parser():
-        parser = argparse.ArgumentParser(description='Executes rcon command')
+    @classmethod
+    def build_parser(cls):
+        parser = super(XRconProgram, cls).build_parser()
         parser.add_argument('--config', type=argparse.FileType('r'))
         parser.add_argument('--timeout', type=float)
         parser.add_argument('-n', '--name')
@@ -123,14 +142,8 @@ class XRconProgram(object):
 
         return dct
 
-    @classmethod
-    def start(cls, args=None):
-        obj = cls()
-        obj.run(args=args)
-        return obj
 
-
-class XPingProgram(object):
+class XPingProgram(BaseProgram):
 
     description = 'Ping remote Xonotic server'
     minimal_interval = 0.5
@@ -138,7 +151,7 @@ class XPingProgram(object):
     default_port = 26000
 
     def __init__(self):
-        self.parser = self.build_parser()
+        super(XPingProgram, self).__init__()
         self.server = None
         self.sock = None
         self.server_name = None
@@ -362,7 +375,7 @@ class XPingProgram(object):
 
     @classmethod
     def build_parser(cls):
-        parser = argparse.ArgumentParser(description=cls.description)
+        parser = super(XPingProgram, cls).build_parser()
         parser.add_argument('-p', '--port', default=cls.default_port,
                             type=cls.port_validator,
                             help='udp port where to send packets')
@@ -379,9 +392,3 @@ class XPingProgram(object):
                             type=cls.count_validator)
         parser.add_argument('server', type=str)
         return parser
-
-    @classmethod
-    def start(cls, args=None):
-        obj = cls()
-        obj.run(args=args)
-        return obj
