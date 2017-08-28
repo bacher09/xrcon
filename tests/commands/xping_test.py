@@ -1,7 +1,7 @@
-from .base_command_test import BaseCommandTest, ExitException
-from xrcon.commands import XPingProgram
+from .base import BaseCommandTest, ExitException
+from xrcon.commands.xping import XPingProgram
 from xrcon.utils import PONG_Q2_PACKET, PING_Q2_PACKET
-from .base import mock
+from ..base import mock
 import collections
 import itertools
 import argparse
@@ -44,7 +44,7 @@ class XPingCommandTest(BaseCommandTest):
         self.select_mock.side_effect = select_side_effect
 
     def patch_monotonic_time(self):
-        time_patch = mock.patch('xrcon.commands.monotonic_time')
+        time_patch = mock.patch('xrcon.commands.xping.monotonic_time')
         self.monotonic_time_mock = time_patch.start()
         self.addCleanup(time_patch.stop)
 

@@ -1,6 +1,6 @@
-from .base import mock
-from .base_command_test import BaseCommandTest, ExitException
-from xrcon.commands import XRcon, XRconProgram, ConfigParser
+from ..base import mock
+from .base import BaseCommandTest, ExitException
+from xrcon.commands.xrcon import XRcon, XRconProgram, ConfigParser
 from xrcon.utils import parse_server_addr
 import socket
 import six
@@ -66,7 +66,7 @@ class XRconCommandTest(BaseCommandTest):
         self.addCleanup(read_patcher.stop)
 
     def patch_xrcon(self):
-        xrcon_patcher = mock.patch('xrcon.commands.XRcon', autospec=True,
+        xrcon_patcher = mock.patch('xrcon.commands.xrcon.XRcon', autospec=True,
                                    RCON_TYPES=XRcon.RCON_TYPES)
 
         self.xrcon_mock = xrcon_patcher.start()

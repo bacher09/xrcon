@@ -1,4 +1,4 @@
-from .base import TestCase, mock
+from ..base import TestCase, mock
 
 
 class ExitException(Exception):
