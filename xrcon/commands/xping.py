@@ -94,6 +94,14 @@ class XPingProgram(BaseProgram):
             received=self.packets_received,
             loss=loss_percent
         ))
+        self.pring_stats()
+
+    def pring_stats(self):
+        if self.packets_received < 1:
+            # there is no any stats
+            # print empty line so output format will be same
+            print("")
+            return
 
         rtt_min, rtt_avg, rtt_max, mdev = self.get_statistics()
         print(

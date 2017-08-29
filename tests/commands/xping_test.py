@@ -273,6 +273,30 @@ class XPingCommandTest(BaseCommandTest):
         self.assertEqual(obj.packets_received, 5)
         self.assertEqual(obj.packets_sent, 10)
 
+    def test_command_not_responding(self):
+        self.getaddrinfo_mock.return_value = [(
+            socket.AF_INET,
+            socket.SOCK_DGRAM,
+            socket.IPPROTO_UDP,
+            '',
+            ('127.0.0.1', 26000)
+        )]
+
+        def sendto_mock(data, addr):
+            return len(data)
+
+        self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
+        self.socket_mock.return_value.sendto.side_effect = sendto_mock
+        self.socket_mock.return_value.recvfrom.side_effect = socket.error
+        self.select_mock.side_effect = None
+        self.select_mock.return_value = [], [], []
+        # start test
+        obj = self.start_xping("-c 10 someserver.example".split())
+        # evalute result
+        self.assertEqual(obj.packets_lost, 10)
+        self.assertEqual(obj.packets_received, 0)
+        self.assertEqual(obj.packets_sent, 10)
+
     def test_command_lost_blocking_error(self):
         self.getaddrinfo_mock.return_value = [(
             socket.AF_INET,
