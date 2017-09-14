@@ -1,6 +1,5 @@
 from .base import BaseCommandTest, ExitException
 from xrcon.commands.xping import XPingProgram
-from xrcon.utils import PONG_Q2_PACKET, PING_Q2_PACKET
 from ..base import mock
 import collections
 import itertools
@@ -9,6 +8,9 @@ import socket
 import errno
 import math
 import six
+from xrcon.utils import (
+    PONG_Q2_PACKET, PING_Q2_PACKET, PING_Q3_PACKET, PONG_Q3_PACKET
+)
 
 
 class XPingCommandTest(BaseCommandTest):
@@ -271,6 +273,39 @@ class XPingCommandTest(BaseCommandTest):
         # evalute result
         self.assertEqual(obj.packets_lost, 5)
         self.assertEqual(obj.packets_received, 5)
+        self.assertEqual(obj.packets_sent, 10)
+
+    def test_command_ping_q3(self):
+        packets_queue = collections.deque()
+        self.getaddrinfo_mock.return_value = [(
+            socket.AF_INET,
+            socket.SOCK_DGRAM,
+            socket.IPPROTO_UDP,
+            '',
+            ('127.0.0.1', 27000)
+        )]
+
+        def sendto_mock(data, addr):
+            if data == PING_Q3_PACKET:
+                packets_queue.append((PONG_Q3_PACKET, addr))
+
+            return len(data)
+
+        def recvfrom_mock(size):
+            data, addr = packets_queue.popleft()
+            return data[:size], addr
+
+        self.socket_mock.return_value.sendto.side_effect = sendto_mock
+        self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
+        self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
+
+        # start test
+        obj = self.start_xping(
+            "-t q3 -c 10 -p 27000 someserver.example".split()
+        )
+        # evalute result
+        self.assertEqual(obj.packets_lost, 0)
+        self.assertEqual(obj.packets_received, 10)
         self.assertEqual(obj.packets_sent, 10)
 
     def test_command_not_responding(self):

@@ -5,8 +5,12 @@ import errno
 import math
 import time
 import six
+from collections import namedtuple
 from .base import BaseProgram
-from ..utils import PING_Q2_PACKET, PONG_Q2_PACKET, MAX_PACKET_SIZE
+from ..utils import (
+    PING_Q2_PACKET, PONG_Q2_PACKET, PING_QFUSION_PACKET, PONG_QFUSION_PACKET,
+    PING_Q3_PACKET, PONG_Q3_PACKET, MAX_PACKET_SIZE
+)
 
 
 if six.PY3:  # pragma: no cover
@@ -15,17 +19,32 @@ else:   # pragma: no cover
     monotonic_time = time.time
 
 
+PingProtocol = namedtuple('PingProtocol', ['ping', 'pong'])
+
+
+Q2_PROTOCOL = PingProtocol(PING_Q2_PACKET, PONG_Q2_PACKET)
+QFUSION_PROTOCOL = PingProtocol(PING_QFUSION_PACKET, PONG_QFUSION_PACKET)
+Q3_PROTOCOL = PingProtocol(PING_Q3_PACKET, PONG_Q3_PACKET)
+
+
 class XPingProgram(BaseProgram):
 
     description = 'Ping remote Xonotic server'
     minimal_interval = 0.5
     default_interval = 1.0
     default_port = 26000
+    ping_protocols = {
+        'q2': Q2_PROTOCOL,
+        'q3': Q3_PROTOCOL,
+        'qfusion': QFUSION_PROTOCOL
+    }
+    default_ping_protocol = 'q2'
 
     def __init__(self):
         super(XPingProgram, self).__init__()
         self.server = None
         self.sock = None
+        self.ping_proto = None
         self.server_name = None
         self.packets_sent = 0
         self.packets_received = 0
@@ -43,6 +62,7 @@ class XPingProgram(BaseProgram):
 
     def run(self, args=None):
         namespace = self.parser.parse_args(args)
+        self.ping_proto = self.ping_protocols[namespace.ping_proto]
         self.execute(namespace)
 
     def find_server(self, namespace):
@@ -141,7 +161,7 @@ class XPingProgram(BaseProgram):
     def do_ping(self, count=0, interval=1.0):
         self.ping_start = monotonic_time()
         while True:
-            self.sock.sendto(PING_Q2_PACKET, self.addr)
+            self.sock.sendto(self.ping_proto.ping, self.addr)
             self.packets_sent += 1
             received, time_left = self.wait_response(interval)
             if received:
@@ -193,7 +213,7 @@ class XPingProgram(BaseProgram):
         if rlst:
             try:
                 data, addr = self.sock.recvfrom(MAX_PACKET_SIZE)
-                if data == PONG_Q2_PACKET and addr == self.addr:
+                if data == self.ping_proto.pong and addr == self.addr:
                     end_time = monotonic_time()
                     timeout -= end_time - start_time
                     return True, timeout
@@ -256,6 +276,9 @@ class XPingProgram(BaseProgram):
     @classmethod
     def build_parser(cls):
         parser = super(XPingProgram, cls).build_parser()
+        parser.add_argument('-t', '--protocol', dest='ping_proto',
+                            default=cls.default_ping_protocol,
+                            choices=cls.ping_protocols.keys())
         parser.add_argument('-p', '--port', default=cls.default_port,
                             type=cls.port_validator,
                             help='udp port where to send packets')
