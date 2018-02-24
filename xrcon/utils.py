@@ -57,8 +57,8 @@ else:  # pragma: no cover
         return hmac.new(key, msg, md4)
 
 
-def rcon_secure_time_packet(password, command):
-    cur_time = time.time()
+def rcon_secure_time_packet(password, command, time_diff=0):
+    cur_time = time.time() + time_diff
     cmd_and_time = "{time:6f} {cmd}".format(time=cur_time, cmd=command)
     key = hmac_md4(password, cmd_and_time).digest()
     return six.b('').join([
