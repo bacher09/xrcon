@@ -7,7 +7,7 @@ xrcon
 .. image:: https://ci.appveyor.com/api/projects/status/d0xmpvmpb8c9skb0?svg=true&branch=master
     :target: https://ci.appveyor.com/project/bacher09/xrcon
 
-.. image:: https://coveralls.io/repos/bacher09/xrcon/badge.png?branch=master
+.. image:: https://coveralls.io/repos/bacher09/xrcon/badge.svg?branch=master
     :target: https://coveralls.io/r/bacher09/xrcon?branch=master 
 
 
