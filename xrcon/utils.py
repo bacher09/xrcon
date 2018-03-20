@@ -58,6 +58,9 @@ else:  # pragma: no cover
 
 
 def rcon_secure_time_packet(password, command, time_diff=0):
+    if six.PY3 and isinstance(command, six.binary_type):
+        command = command.decode("utf8")
+
     cur_time = time.time() + time_diff
     cmd_and_time = "{time:6f} {cmd}".format(time=cur_time, cmd=command)
     key = hmac_md4(password, cmd_and_time).digest()

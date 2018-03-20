@@ -56,6 +56,17 @@ class UtilsTest(TestCase):
                   '\xa9\x9f\xa8 100.000000 status')
         )
 
+    @unittest.skipUnless(six.PY3, "works only in python 3")
+    @mock.patch('time.time')
+    def test_rcon_secure_time_packet_bytes(self, time_mock):
+        time_mock.return_value = 100.0
+        self.assertEqual(
+            utils.rcon_secure_time_packet(b'passw', b'status'),
+            six.b('\xff\xff\xff\xffsrcon HMAC-MD4 TIME '
+                  'R\xcbv\xf0\xa7p\xcd\xca\xf2!\xc3~\x06'
+                  '\xa9\x9f\xa8 100.000000 status')
+        )
+
     def test_rcon_secure_challenge_packet(self):
         self.assertEqual(
             utils.rcon_secure_challenge_packet('passw', six.b('11111111111'),
