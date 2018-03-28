@@ -48,6 +48,7 @@ class XPingProgram(BaseProgram):
         self.server_name = None
         self.packets_sent = 0
         self.packets_received = 0
+        self.packets_duplicated = 0
         # packets that are lost for sure
         self.packets_lost = 0
         # packets_sent - packets_received can be wrong for one packet
@@ -103,17 +104,23 @@ class XPingProgram(BaseProgram):
             server=self.server_name
         ))
 
-        # TODO: packets_received can be bigger then packets_sent
         loss = self.packets_sent - self.packets_received
         loss_percent = (loss / self.packets_sent) * 100
-        fmt_string = "{sent:d} packets transmitted, {received:d} received, " \
-                     "{loss:0.1f}% packet loss"
-
-        print(fmt_string.format(
+        part = "{sent:d} packets transmitted, {received:d} received,".format(
             sent=self.packets_sent,
             received=self.packets_received,
-            loss=loss_percent
-        ))
+        )
+
+        if self.packets_duplicated > 0:
+            part += " {dup:d} duplicated,".format(dup=self.packets_duplicated)
+
+        part += " {loss:0.1f}% packet loss".format(loss=loss_percent)
+        print(part)
+
+        if self.packets_duplicated > 0:
+            print("WARNING: Results might be incorrect because"
+                  " of duplicated packets")
+
         self.pring_stats()
 
     def pring_stats(self):
@@ -162,8 +169,8 @@ class XPingProgram(BaseProgram):
         self.ping_start = monotonic_time()
         while True:
             self.sock.sendto(self.ping_proto.ping, self.addr)
-            self.packets_sent += 1
             received, time_left = self.wait_response(interval)
+            self.packets_sent += 1
             if received:
                 self.packets_received += 1
                 rtt = interval - time_left
@@ -175,8 +182,12 @@ class XPingProgram(BaseProgram):
             if count != 0 and self.packets_sent >= count:
                 break
 
-            # TODO: process duplicated packets
-            time.sleep(time_left)
+            while time_left > 0:
+                # handle duplicated packets
+                received, time_left = self.wait_response(time_left)
+                if received:
+                    self.packets_duplicated += 1
+                    self.duplicate_received()
 
     def execute(self, namespace):
         self.server_name = namespace.server
@@ -196,6 +207,11 @@ class XPingProgram(BaseProgram):
             ip_addr=self.addr[0],
             port=self.addr[1],
             time_ms=time_spent * 1000
+        ))
+
+    def duplicate_received(self):
+        print("{ip_addr} port={port} DUPLICATE".format(
+            ip_addr=self.addr[0], port=self.addr[1]
         ))
 
     def wait_response(self, timeout):

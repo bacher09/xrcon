@@ -13,6 +13,13 @@ from xrcon.utils import (
 )
 
 
+def make_blocking_error():
+    if six.PY3:
+        raise BlockingIOError(errno.EAGAIN, "Blocking error")
+    else:
+        raise socket.error(errno.EAGAIN, "Blocking error")
+
+
 class XPingCommandTest(BaseCommandTest):
 
     def setUp(self):
@@ -182,9 +189,20 @@ class XPingCommandTest(BaseCommandTest):
             return len(data)
 
         def recvfrom_mock(size):
-            data, addr = packets_queue.popleft()
-            return data[:size], addr
+            try:
+                data, addr = packets_queue.popleft()
+            except IndexError:
+                raise make_blocking_error()
+            else:
+                return data[:size], addr
 
+        def select_side_effect(rfds, wfds, efds, timeout=None):
+            if len(packets_queue) > 0:
+                return rfds, wfds, efds
+            else:
+                return [], [], []
+
+        self.select_mock.side_effect = select_side_effect
         self.socket_mock.return_value.sendto.side_effect = sendto_mock
         self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
         self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
@@ -196,7 +214,7 @@ class XPingCommandTest(BaseCommandTest):
         self.assertEqual(obj.packets_received, 5)
         self.assertEqual(obj.packets_sent, 5)
 
-    def test_command_interrupted(self):
+    def test_command_send_interrupted(self):
         self.getaddrinfo_mock.return_value = [(
             socket.AF_INET,
             socket.SOCK_DGRAM,
@@ -219,9 +237,20 @@ class XPingCommandTest(BaseCommandTest):
             return len(data)
 
         def recvfrom_mock(size):
-            data, addr = packets_queue.popleft()
-            return data[:size], addr
+            try:
+                data, addr = packets_queue.popleft()
+            except IndexError:
+                raise make_blocking_error()
+            else:
+                return data[:size], addr
 
+        def select_side_effect(rfds, wfds, efds, timeout=None):
+            if len(packets_queue) > 0:
+                return rfds, wfds, efds
+            else:
+                return [], [], []
+
+        self.select_mock.side_effect = select_side_effect
         self.socket_mock.return_value.sendto.side_effect = sendto_mock
         self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
         self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
@@ -230,6 +259,55 @@ class XPingCommandTest(BaseCommandTest):
         obj = self.start_xping("someserver.example".split())
         # evalute result
         self.assertEqual(self.socket_mock.return_value.recvfrom.call_count, 20)
+        self.assertEqual(obj.packets_lost, 0)
+        self.assertEqual(obj.packets_received, 20)
+        self.assertEqual(obj.packets_sent, 20)
+
+    def test_command_recv_interrupted(self):
+        self.getaddrinfo_mock.return_value = [(
+            socket.AF_INET,
+            socket.SOCK_DGRAM,
+            socket.IPPROTO_UDP,
+            '',
+            ('127.0.0.1', 26000)
+        )]
+
+        packets_queue = collections.deque()
+        self.recv_count = 0
+
+        def sendto_mock(data, addr):
+
+            if data == PING_Q2_PACKET:
+                packets_queue.append((PONG_Q2_PACKET, addr))
+
+            return len(data)
+
+        def recvfrom_mock(size):
+            if self.recv_count > 19:
+                raise KeyboardInterrupt
+
+            try:
+                data, addr = packets_queue.popleft()
+            except IndexError:
+                raise make_blocking_error()
+            else:
+                self.recv_count += 1
+                return data[:size], addr
+
+        def select_side_effect(rfds, wfds, efds, timeout=None):
+            if len(packets_queue) > 0:
+                return rfds, wfds, efds
+            else:
+                return [], [], []
+
+        self.select_mock.side_effect = select_side_effect
+        self.socket_mock.return_value.sendto.side_effect = sendto_mock
+        self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
+        self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
+        # start test
+        obj = self.start_xping("someserver.example".split())
+        # evalute result
+        self.assertEqual(self.socket_mock.return_value.recvfrom.call_count, 21)
         self.assertEqual(obj.packets_lost, 0)
         self.assertEqual(obj.packets_received, 20)
         self.assertEqual(obj.packets_sent, 20)
@@ -275,6 +353,48 @@ class XPingCommandTest(BaseCommandTest):
         self.assertEqual(obj.packets_received, 5)
         self.assertEqual(obj.packets_sent, 10)
 
+    def test_command_duplicated_packets(self):
+        self.getaddrinfo_mock.return_value = [(
+            socket.AF_INET,
+            socket.SOCK_DGRAM,
+            socket.IPPROTO_UDP,
+            '',
+            ('127.0.0.1', 26000)
+        )]
+
+        packets_queue = collections.deque()
+        self.send_count = 0
+
+        def sendto_mock(data, addr):
+            if data == PING_Q2_PACKET:
+                packets_queue.append((PONG_Q2_PACKET, addr))
+                packets_queue.append((PONG_Q2_PACKET, addr))
+
+            self.send_count += 1
+            return len(data)
+
+        def recvfrom_mock(size):
+            data, addr = packets_queue.popleft()
+            return data[:size], addr
+
+        self.socket_mock.return_value.sendto.side_effect = sendto_mock
+        self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
+        self.monotonic_time_mock.side_effect = itertools.count(0.1, 0.02)
+
+        def select_side_effect(rlist, wlist, xlist, timeout=None):
+            if len(packets_queue) > 0:
+                return rlist, wlist, xlist
+            else:
+                return [], [], []
+
+        self.select_mock.side_effect = select_side_effect
+        # start test
+        obj = self.start_xping("-c 10 someserver.example".split())
+        # evalute result
+        self.assertEqual(obj.packets_duplicated, 10 - 1)  # we don't wait last
+        self.assertEqual(obj.packets_sent, 10)
+        self.assertEqual(obj.packets_received, 10)
+
     def test_command_ping_q3(self):
         packets_queue = collections.deque()
         self.getaddrinfo_mock.return_value = [(
@@ -292,8 +412,12 @@ class XPingCommandTest(BaseCommandTest):
             return len(data)
 
         def recvfrom_mock(size):
-            data, addr = packets_queue.popleft()
-            return data[:size], addr
+            try:
+                data, addr = packets_queue.popleft()
+            except IndexError:
+                raise make_blocking_error()
+            else:
+                return data[:size], addr
 
         self.socket_mock.return_value.sendto.side_effect = sendto_mock
         self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
@@ -355,10 +479,7 @@ class XPingCommandTest(BaseCommandTest):
             try:
                 data, addr = packets_queue.popleft()
             except IndexError:
-                if six.PY3:
-                    raise BlockingIOError(errno.EAGAIN, "Blocking error")
-                else:
-                    raise socket.error(errno.EAGAIN, "Blocking error")
+                raise make_blocking_error()
             else:
                 return data[:size], addr
 
@@ -421,8 +542,12 @@ class XPingCommandTest(BaseCommandTest):
             return len(data)
 
         def recvfrom_mock(size):
-            data, addr = packets_queue.popleft()
-            return data[:size], addr
+            try:
+                data, addr = packets_queue.popleft()
+            except IndexError:
+                raise make_blocking_error()
+            else:
+                return data[:size], addr
 
         self.socket_mock.return_value.sendto.side_effect = sendto_mock
         self.socket_mock.return_value.recvfrom.side_effect = recvfrom_mock
