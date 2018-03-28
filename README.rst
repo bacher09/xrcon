@@ -93,6 +93,44 @@ Then if you wants execute command on this servers just do::
   $ xrcon -n other status # for other server
   $ xrcon -n another status # for another server
 
+Also, there is another one CLI utility — ``xping``. It can be used to measure
+rtt_ for server or client. It also supports other games too, so you can measure
+ping for Warsow, Quake 3, Urban Terror and some other games.
+Here's an example::
+
+  $ xping -c 4 pub.regulars.win
+  XPING pub.regulars.win (89.163.144.234) port: 26000
+  89.163.144.234 port=26000 time=39.36 ms
+  89.163.144.234 port=26000 time=39.63 ms
+  89.163.144.234 port=26000 time=39.83 ms
+  89.163.144.234 port=26000 time=39.87 ms
+
+  --- pub.regulars.win ping statistics ---
+  4 packets transmitted, 4 received, 0.0% packet loss
+  rtt min/avg/max/mdev = 39.357/39.672/39.870/0.204 ms
+
+Also, you can ping clients too, this might be helpful for server admins for
+checking client networking. First, you need to determine client host and
+port. You can do this via `rcon status` command. Let's suppose that status
+command returned ``172.16.254.2:33045`` address, then xping command will be
+look like this: ``xping -p 33045 172.16.254.2``. Note, that this might not work
+for some clients because of firewalls and NATs.
+
+Here's few other examples::
+
+  $ xping -p 26005 mars.regulars.win  # stop it with Ctrl-C
+  $ xping -p 44400 -t qfusion 212.83.185.75  # ping warsow server
+  $ xping -p 27960 -t q3 144.76.158.173  # ping urban terror server
+
+For more info about CLI options check ``xping --help``.
+
+In some cases results of xping might be inaccurate. For example, if you
+experience packet duplication or reordering. All currently supported
+gaming protocols have no way to identify concrete response for probe.
+Because of this, there is no way to determine if application received original
+or duplicated response. It can affect result even more, if duplicated packet
+will arrive some time later, so application can process it as response for
+new probe.  In some cases application might detect packet duplication.
 
 License
 -------
@@ -106,3 +144,4 @@ __ Warsow_rcon_
 .. _Nexuiz_wiki: https://en.wikipedia.org/wiki/Nexuiz
 .. _Warsow: http://www.warsow.net/
 .. _Warsow_rcon: http://www.warsow.net/wiki/RCON
+.. _rtt: https://en.wikipedia.org/wiki/Round-trip_delay_time
