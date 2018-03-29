@@ -36,7 +36,7 @@ setup(
     author='Slava Bacherikov',
     author_email='slava@bacher09.org',
     url="https://github.com/bacher09/xrcon",
-    packages=["xrcon"],
+    packages=["xrcon", "xrcon.commands"],
     install_requires=requires,
     tests_require=tests_require,
     test_suite="nose.collector",
