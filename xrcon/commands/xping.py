@@ -100,6 +100,9 @@ class XPingProgram(BaseProgram):
         ))
 
     def print_footer(self):
+        if self.packets_sent <= 0:
+            return
+
         print('\n--- {server} ping statistics ---'.format(
             server=self.server_name
         ))
